@@ -15,7 +15,7 @@
             margin: 0;
         }
         .container {
-            margin-top: 50px;
+            margin-top: 30px;
         }
         .btn {
             background-color: var(--tg-theme-button-color, #3390ec);
@@ -37,12 +37,78 @@
             font-size: 16px;
             font-weight: bold;
         }
+        
+        /* Стили для блока капчи */
+        .captcha-block {
+            margin-top: 25px;
+            text-align: left;
+            background-color: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .captcha-label {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #707579);
+            font-weight: 500;
+        }
+        .captcha-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        #captchaImg {
+            height: 52px;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            display: block;
+        }
+        .btn-refresh {
+            background: var(--tg-theme-bg-color, #ffffff);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: var(--tg-theme-text-color, #000000);
+            border-radius: 8px;
+            height: 52px;
+            width: 52px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #captchaInput {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--tg-theme-hint-color, #707579);
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            text-transform: uppercase;
+            outline: none;
+        }
+        #captchaInput:focus {
+            border-color: var(--tg-theme-button-color, #3390ec);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 id="title">Участие в розыгрыше</h1>
-        <p id="description">Нажмите кнопку ниже, чтобы подтвердить свое участие.</p>
+        <p id="description">Заполните проверку и нажмите кнопку ниже для участия.</p>
+
+        <div class="captcha-block">
+            <p class="captcha-label">Введите текст с картинки (английские буквы):</p>
+            <div class="captcha-row">
+                <img id="captchaImg" src="" alt="Загрузка капчи...">
+                <button type="button" id="refreshCaptchaBtn" class="btn-refresh">🔄</button>
+            </div>
+            <input type="text" id="captchaInput" placeholder="РЕГИСТР НЕ ВАЖЕН" autocomplete="off">
+        </div>
 
         <button id="joinBtn" class="btn">Участвовать</button>
         <div id="statusMessage" class="status"></div>
@@ -57,11 +123,36 @@
         const urlParams = new URLSearchParams(window.location.search);
         const gv_id = urlParams.get('gv_id');
 
+        let currentCaptchaId = "";
+
         const joinBtn = document.getElementById('joinBtn');
         const statusMessage = document.getElementById('statusMessage');
+        const captchaImg = document.getElementById('captchaImg');
+        const captchaInput = document.getElementById('captchaInput');
+        const refreshCaptchaBtn = document.getElementById('refreshCaptchaBtn');
 
-        // ВАЖНО: Замените на реальный IP или домен вашего бота
         const API_URL = "https://dudaludo-app.ru/api/join";
+        const CAPTCHA_URL = "https://dudaludo-app.ru/api/get_captcha";
+
+        // Функция загрузки капчи с бэкенда
+        async function loadCaptcha() {
+            try {
+                const response = await fetch(CAPTCHA_URL);
+                const data = await response.json();
+                currentCaptchaId = data.captcha_id;
+                captchaImg.src = data.image;
+                captchaInput.value = ""; // Очищаем поле ввода при обновлении
+            } catch (err) {
+                console.error("Ошибка загрузки капчи:", err);
+                statusMessage.innerText = "❌ Ошибка загрузки защитной картинки.";
+            }
+        }
+
+        // Загружаем капчу сразу при открытии страницы
+        document.addEventListener("DOMContentLoaded", () => {
+            loadCaptcha();
+            refreshCaptchaBtn.addEventListener('click', loadCaptcha);
+        });
 
         joinBtn.addEventListener('click', async () => {
             if (!gv_id) {
@@ -69,11 +160,18 @@
                 return;
             }
 
+            const captchaValue = captchaInput.value.trim();
+            if (!captchaValue) {
+                statusMessage.innerText = "⚠️ Пожалуйста, введите текст с картинки!";
+                return;
+            }
+
             joinBtn.disabled = true;
             joinBtn.innerText = "Загрузка...";
+            statusMessage.innerText = "";
 
             try {
-                // Отправляем безопасные данные авторизации Telegram на наш бэкенд
+                // Отправляем данные авторизации Telegram + данные капчи
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -81,7 +179,9 @@
                     },
                     body: JSON.stringify({
                         initData: tg.initData,
-                        gv_id: gv_id
+                        gv_id: gv_id,
+                        captcha_id: currentCaptchaId,
+                        captcha_input: captchaValue
                     })
                 });
 
@@ -91,18 +191,30 @@
                     tg.HapticFeedback.notificationOccurred('success');
                     statusMessage.innerText = "✅ Вы успешно зарегистрированы!";
                     joinBtn.style.display = 'none';
+                    document.querySelector('.captcha-block').style.display = 'none';
 
                     // Закрываем окно через 2 секунды
                     setTimeout(() => tg.close(), 2000);
                 } else {
                     tg.HapticFeedback.notificationOccurred('error');
-                    if (result.error === "not_subscribed") {
+                    
+                    if (result.error === "wrong_captcha") {
+                        statusMessage.innerText = "❌ Неверный текст с картинки! Попробуйте снова.";
+                        loadCaptcha(); // Меняем капчу на новую при ошибке
+                    } else if (result.error === "invalid_captcha_session") {
+                        statusMessage.innerText = "❌ Сессия проверки устарела. Картинка обновлена.";
+                        loadCaptcha();
+                    } else if (result.error === "not_subscribed") {
                         statusMessage.innerText = "❌ Вы не подписаны на обязательные каналы!";
+                        loadCaptcha();
                     } else if (result.error === "already_participating") {
                         statusMessage.innerText = "ℹ️ Вы уже участвуете в этом розыгрыше.";
+                        setTimeout(() => tg.close(), 2000);
                     } else {
                         statusMessage.innerText = "❌ Произошла ошибка. Попробуйте позже.";
+                        loadCaptcha();
                     }
+                    
                     joinBtn.disabled = false;
                     joinBtn.innerText = "Попробовать снова";
                 }
