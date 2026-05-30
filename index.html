@@ -205,7 +205,10 @@
                         statusMessage.innerText = "❌ Сессия проверки устарела. Картинка обновлена.";
                         loadCaptcha();
                     } else if (result.error === "not_subscribed") {
-                        statusMessage.innerText = "❌ Вы не подписаны на обязательные каналы!";
+                        statusMessage.innerHTML = "❌ Для участия в розыгрыше необходимо быть подписанным на каналы:<br><br>" +
+                              "🔗 <a href='https://t.me/DUDALUDO3' target='_blank'>t.me/DUDALUDO3</a><br>" +
+                              "🔗 <a href='https://t.me/DudaLudoChat' target='_blank'>t.me/DudaLudoChat</a>";
+                    }
                         loadCaptcha();
                     } else if (result.error === "already_participating") {
                         statusMessage.innerText = "ℹ️ Вы уже участвуете в этом розыгрыше.";
