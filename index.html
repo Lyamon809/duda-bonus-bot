@@ -200,7 +200,7 @@
                     
                     if (result.error === "wrong_captcha") {
                         statusMessage.innerText = "❌ Неверный текст с картинки! Попробуйте снова.";
-                        loadCaptcha(); // Меняем капчу на новую при ошибке
+                        loadCaptcha(); 
                     } else if (result.error === "invalid_captcha_session") {
                         statusMessage.innerText = "❌ Сессия проверки устарела. Картинка обновлена.";
                         loadCaptcha();
@@ -208,8 +208,7 @@
                         statusMessage.innerHTML = "❌ Для участия в розыгрыше необходимо быть подписанным на каналы:<br><br>" +
                               "🔗 <a href='https://t.me/DUDALUDO3' target='_blank'>t.me/DUDALUDO3</a><br>" +
                               "🔗 <a href='https://t.me/DudaLudoChat' target='_blank'>t.me/DudaLudoChat</a>";
-                    }
-                        loadCaptcha();
+                        loadCaptcha(); // Перенесли внутрь блока
                     } else if (result.error === "already_participating") {
                         statusMessage.innerText = "ℹ️ Вы уже участвуете в этом розыгрыше.";
                         setTimeout(() => tg.close(), 2000);
